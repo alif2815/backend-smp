@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  role      Role     @default(SISWA)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  biodataSiswa Biodata_siswa?
+  biodataGuru  Biodata_guru?
+
+  @@map("users")
+}
+
+enum Role {
+  SUPER_ADMIN
+  GURU
+  SISWA
+}
+
+model Biodata_siswa {
+  id            Int         @id @default(autoincrement())
+  user_id       Int         @unique @db.Int
+  user          User        @relation(fields: [user_id], references: [id])
+  nisn          String      @unique @db.VarChar(255)
+  nama_lengkap  String      @db.VarChar(255)
+  jenis_kelamin String      @db.VarChar(255)
+  status_siswa  StatusSiswa @default(AKTIF)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  plotingSiswa Ploting_Siswa[] // 1 Siswa bisa diploting berkali-kali (tiap naik kelas/tahun)
+  nilais       Nilai[]
+}
+
+enum StatusSiswa {
+  CALON
+  AKTIF
+  ALUMNI
+}
+
+model Biodata_guru {
+  id        Int      @id @default(autoincrement())
+  user_id   Int      @unique @db.Int
+  user      User     @relation(fields: [user_id], references: [id])
+  nip       String?  @unique @db.VarChar(255)
+  nama_guru String   @db.VarChar(255)
+  no_hp     String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kelasWali       Kelas[] // 1 Guru bisa menjadi wali di banyak kelas (beda tahun)
+  jadwalPelajaran Jadwal_Pelajaran[] // 1 Guru mengajar banyak jadwal
+  nilais          Nilai[]
+  mapels          Mapel[]
+}
+
+model Kelas {
+  id         Int          @id @default(autoincrement())
+  nama_kelas String       @db.VarChar(255)
+  guru_id    Int          @db.Int
+  guruWali   Biodata_guru @relation(fields: [guru_id], references: [id])
+
+  plotingSiswa    Ploting_Siswa[]
+  jadwalPelajaran Jadwal_Pelajaran[]
+}
+
+model Ploting_Siswa {
+  id           Int           @id @default(autoincrement())
+  siswa_id     Int           @db.Int
+  siswa        Biodata_siswa @relation(fields: [siswa_id], references: [id])
+  kelas_id     Int           @db.Int
+  kelas        Kelas         @relation(fields: [kelas_id], references: [id])
+  tahun_ajaran String        @db.VarChar(255)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Mapel {
+  id              Int                @id @default(autoincrement())
+  nama_mapel      String             @db.VarChar(255)
+  jadwalPelajaran Jadwal_Pelajaran[]
+  nilais          Nilai[]
+}
+
+model Jadwal_Pelajaran {
+  id          Int          @id @default(autoincrement())
+  kelas_id    Int          @db.Int
+  kelas       Kelas        @relation(fields: [kelas_id], references: [id])
+  mapel_id    Int          @db.Int
+  mapel       Mapel        @relation(fields: [mapel_id], references: [id])
+  guru_id     Int          @db.Int
+  guru        Biodata_guru @relation(fields: [guru_id], references: [id])
+  hari        String       @db.VarChar(255)
+  jam_mulai   DateTime     @db.Time(0)
+  jam_selesai DateTime     @db.Time(0)
+}
+
+model Nilai {
+  id          Int           @id @default(autoincrement())
+  siswa_id    Int           @db.Int
+  siswa       Biodata_siswa @relation(fields: [siswa_id], references: [id])
+  mapel_id    Int           @db.Int
+  mapel       Mapel         @relation(fields: [mapel_id], references: [id])
+  guru_id     Int           @db.Int
+  guru        Biodata_guru  @relation(fields: [guru_id], references: [id])
+  semester    Int           @default(1) @db.Int
+  nilai_tugas Decimal       @db.Decimal(5, 2)
+  nilai_uts   Decimal       @db.Decimal(5, 2)
+  nilai_uas   Decimal       @db.Decimal(5, 2)
+  nilai_akhir Decimal       @db.Decimal(5, 2)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
